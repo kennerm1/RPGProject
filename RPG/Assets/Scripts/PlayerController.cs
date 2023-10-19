@@ -29,6 +29,7 @@ public class PlayerController : MonoBehaviourPun
     public Animator weaponAnim;
 
     public static PlayerController me;
+    public HeaderInfo headerInfo;
 
     void Update()
     {
@@ -65,6 +66,8 @@ public class PlayerController : MonoBehaviourPun
         if (hit.collider != null && hit.collider.gameObject.CompareTag("Enemy"))
         {
             // get the enemy and damage them
+            Enemy enemy = hit.collider.GetComponent<Enemy>();
+            enemy.photonView.RPC("TakeDamage", RpcTarget.MasterClient, damage);
         }
         // play attack animation
         weaponAnim.SetTrigger("Attack");
@@ -87,6 +90,8 @@ public class PlayerController : MonoBehaviourPun
                 sr.color = Color.white;
             }
         }
+        // update the health bar
+        headerInfo.photonView.RPC("UpdateHealthBar", RpcTarget.All, curHp);
     }
 
     void Die()
@@ -119,6 +124,9 @@ public class PlayerController : MonoBehaviourPun
         else
             rig.isKinematic = true;
         GameManager.instance.players[id - 1] = this;
+
+        // initialize the health bar
+        headerInfo.Initialize(player.NickName, maxHp);
     }
 
     [PunRPC]
@@ -126,13 +134,16 @@ public class PlayerController : MonoBehaviourPun
     {
         curHp = Mathf.Clamp(curHp + amountToHeal, 0, maxHp);
         // update the health bar
+        headerInfo.photonView.RPC("UpdateHealthBar", RpcTarget.All, curHp);
     }
 
     [PunRPC]
     void GiveGold(int goldToGive)
     {
         gold += goldToGive;
+
         // update the ui
+        GameUI.instance.UpdateGoldText(gold);
     }
 
 }
